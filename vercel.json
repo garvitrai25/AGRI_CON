@@ -2,7 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "simple.py",
+      "src": "build_files.sh",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "staticfiles"
+      }
+    },
+    {
+      "src": "AgricultureWholesale/wsgi.py",
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "15mb",
@@ -12,11 +19,16 @@
   ],
   "routes": [
     {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/simple.py"
+      "dest": "AgricultureWholesale/wsgi.py"
     }
   ],
   "env": {
-    "PYTHONPATH": "."
+    "PYTHONPATH": ".",
+    "VERCEL": "1"
   }
 } 

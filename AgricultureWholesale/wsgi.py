@@ -27,15 +27,9 @@ for init_path in init_paths:
         except Exception as e:
             logging.warning(f"Could not create {init_path}: {e}")
 
-# Check if we're on Vercel
-if os.environ.get('VERCEL'):
-    # Use custom settings for Vercel
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'custom_settings')
-    logging.info("Using custom settings for Vercel deployment")
-else:
-    # Use standard settings for local development
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'AgricultureWholesale.settings')
-    logging.info("Using standard settings")
+# Always use the standard settings
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'AgricultureWholesale.settings')
+logging.info("Using standard settings")
 
 try:
     # Initialize WSGI application
@@ -44,7 +38,11 @@ try:
     logging.info(f"sys.path: {sys.path}")
     logging.info(f"Current directory: {os.getcwd()}")
     logging.info(f"Files in current directory: {os.listdir('.')}")
-    logging.info(f"Files in AgricultureWholesale: {os.listdir('AgricultureWholesale')}")
+    
+    try:
+        logging.info(f"Files in AgricultureWholesale: {os.listdir('AgricultureWholesale')}")
+    except Exception as e:
+        logging.error(f"Could not list files in AgricultureWholesale: {e}")
     
     # Import the urls module explicitly to test if it can be found
     try:
