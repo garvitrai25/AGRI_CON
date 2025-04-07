@@ -19,13 +19,20 @@ mkdir -p staticfiles
 echo "Created staticfiles directory"
 
 # Create __init__.py files to make sure Python recognizes the directories as packages
+mkdir -p AgricultureWholesale
+mkdir -p agro
+mkdir -p account
 touch AgricultureWholesale/__init__.py
 touch agro/__init__.py
 touch account/__init__.py
 echo "Created __init__.py files for packages"
 
+# Ensure the vercel_app.py has execution permissions
+chmod +x vercel_app.py
+echo "Set execution permissions for vercel_app.py"
+
 # Run migrations and collect static files
 echo "Collecting static files..."
-python3 manage.py collectstatic --noinput --settings=custom_settings
+python3 manage.py collectstatic --noinput --clear
 
 echo "Build completed successfully" 
