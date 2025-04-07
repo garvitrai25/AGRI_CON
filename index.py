@@ -1,50 +1,93 @@
-import json
+import importlib.util
 import logging
 import os
 import sys
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
-logger = logging.getLogger('vercel_app')
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+)
 
-# Add current directory to sys.path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, current_dir)
+logging.info("Starting index.py...")
 
-def debug_info():
-    """Collect debug information about the environment"""
-    info = {
-        'current_dir': current_dir,
-        'sys_path': sys.path,
-        'python_version': sys.version,
-        'dir_contents': os.listdir(current_dir),
-        'env_vars': {k: v for k, v in os.environ.items() if not k.startswith('AWS_')},
-    }
-    
-    # Check for important directories
-    for directory in ['AgricultureWholesale', 'agro', 'account']:
-        dir_path = os.path.join(current_dir, directory)
-        if os.path.exists(dir_path):
-            info[f'{directory}_exists'] = True
-            info[f'{directory}_contents'] = os.listdir(dir_path)
-        else:
-            info[f'{directory}_exists'] = False
-    
-    return info
+# Add the project directory to sys.path
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(BASE_DIR)
+logging.info(f"Added {BASE_DIR} to sys.path")
 
-def application(environ, start_response):
-    """Simple WSGI application that returns debug information"""
-    status = '200 OK'
-    headers = [('Content-type', 'application/json')]
-    
-    # Collect debug information
-    info = debug_info()
-    logger.info(f"Debug info: {json.dumps(info, indent=2)}")
-    
-    response_body = json.dumps(info, indent=2).encode('utf-8')
-    
-    start_response(status, headers)
-    return [response_body]
+# Patch for missing distutils in Vercel environment
+# This needs to be done before importing Django
+logging.info("Patching for missing distutils...")
 
-# Vercel requires the handler to be named 'app'
+class LooseVersion:
+    def __init__(self, version_string):
+        self.version_string = version_string
+    def __str__(self):
+        return self.version_string
+    def __repr__(self):
+        return self.version_string
+    def __eq__(self, other):
+        return str(self) == str(other)
+    def __lt__(self, other):
+        return str(self) < str(other)
+    def __gt__(self, other):
+        return str(self) > str(other)
+
+# Create a fake distutils.version module
+class FakeDistutilsVersion:
+    LooseVersion = LooseVersion
+
+# Create a fake distutils module
+class FakeDistutils:
+    version = FakeDistutilsVersion
+
+# Add it to sys.modules
+sys.modules['distutils'] = FakeDistutils
+sys.modules['distutils.version'] = FakeDistutilsVersion
+logging.info("Successfully patched distutils.version.LooseVersion")
+
+# Set Django settings module
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'AgricultureWholesale.settings')
+logging.info("Using AgricultureWholesale.settings")
+
+try:
+    # Debug environment
+    logging.info(f"Python version: {sys.version}")
+    logging.info(f"Current directory contents: {os.listdir(BASE_DIR)}")
+    
+    # Initialize WSGI application
+    logging.info("Importing Django WSGI application...")
+    from django.core.wsgi import get_wsgi_application
+    application = get_wsgi_application()
+    logging.info("WSGI application initialized successfully")
+except Exception as e:
+    logging.error(f"Error initializing application: {e}", exc_info=True)
+    
+    # Create a fallback application that returns error details
+    def application(environ, start_response):
+        status = '500 Internal Server Error'
+        headers = [('Content-type', 'text/html')]
+        start_response(status, headers)
+        
+        error_message = f"""
+        <html>
+        <head><title>Error in Vercel Deployment</title></head>
+        <body>
+            <h1>Error in Vercel Deployment</h1>
+            <p>There was an error initializing the Django application:</p>
+            <pre>{str(e)}</pre>
+            <h2>Environment Information:</h2>
+            <ul>
+                <li>Python Version: {sys.version}</li>
+                <li>Working Directory: {os.getcwd()}</li>
+                <li>Contents: {', '.join(os.listdir('.'))}</li>
+                <li>sys.path: {sys.path}</li>
+            </ul>
+        </body>
+        </html>
+        """
+        return [error_message.encode()]
+
+# Handler for Vercel serverless function
 app = application 
