@@ -6,9 +6,9 @@ echo "Current directory: $(pwd)"
 echo "Listing directory contents:"
 ls -la
 
-# Create a debug directory list
-find . -type d | sort > directory_structure.txt
-echo "Created directory structure file"
+# Install setuptools first to provide distutils
+echo "Installing setuptools..."
+python3 -m pip install setuptools==57.0.0
 
 # Install dependencies
 echo "Installing dependencies..."
