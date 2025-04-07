@@ -1,0 +1,7 @@
+Django>=3.2,<6.0
+django-crispy-forms>=2.0
+crispy-bootstrap5>=0.7
+django-jazzmin>=2.6
+Pillow>=9.0
+asgiref>=3.5
+sqlparse>=0.4 
