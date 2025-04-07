@@ -58,12 +58,13 @@
           </div>
         </div>
         <div class="col-lg-9">
-          <div class="card">
+          <!-- Buyer Orders -->
+          <div class="card mb-4">
             <div class="card-header">
-              <h5 class="mb-0">Order History</h5>
+              <h5 class="mb-0">My Purchase History</h5>
             </div>
             <div class="card-body">
-              {% if orders %}
+              {% if buyer_orders %}
               <div class="table-responsive">
                 <table class="table table-hover">
                   <thead>
@@ -72,38 +73,24 @@
                       <th>Date</th>
                       <th>Total</th>
                       <th>Status</th>
-                      <th>Payment</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {% for order in orders %}
+                    {% for order in buyer_orders %}
                     <tr>
                       <td>#{{ order.id }}</td>
                       <td>{{ order.create_date|date:"M d, Y" }}</td>
-                      <td>${{ order.order_total }}</td>
+                      <td>₹{{ order.order_total }}</td>
                       <td>
                         {% if order.status == 'PENDING' %}
                         <span class="badge bg-warning">{{ order.get_status_display }}</span>
-                        {% elif order.status == 'PROCESSING' %}
+                        {% elif order.status == 'ACCEPTED' %}
                         <span class="badge bg-info">{{ order.get_status_display }}</span>
-                        {% elif order.status == 'SHIPPED' %}
-                        <span class="badge bg-primary">{{ order.get_status_display }}</span>
-                        {% elif order.status == 'DELIVERED' %}
+                        {% elif order.status == 'COMPLETED' %}
                         <span class="badge bg-success">{{ order.get_status_display }}</span>
                         {% elif order.status == 'CANCELLED' %}
                         <span class="badge bg-danger">{{ order.get_status_display }}</span>
-                        {% endif %}
-                      </td>
-                      <td>
-                        {% if order.payment_status == 'PENDING' %}
-                        <span class="badge bg-warning">{{ order.get_payment_status_display }}</span>
-                        {% elif order.payment_status == 'COMPLETED' %}
-                        <span class="badge bg-success">{{ order.get_payment_status_display }}</span>
-                        {% elif order.payment_status == 'FAILED' %}
-                        <span class="badge bg-danger">{{ order.get_payment_status_display }}</span>
-                        {% elif order.payment_status == 'REFUNDED' %}
-                        <span class="badge bg-info">{{ order.get_payment_status_display }}</span>
                         {% endif %}
                       </td>
                       <td>
@@ -115,11 +102,66 @@
                 </table>
               </div>
               {% else %}
-              <div class="text-center py-5">
-                <i class="bi bi-bag-x" style="font-size: 4rem; color: #ffc107;"></i>
-                <h4 class="mt-3">No Orders Yet</h4>
-                <p class="text-muted">You haven't placed any orders yet.</p>
+              <div class="text-center py-4">
+                <i class="bi bi-bag-x" style="font-size: 3rem; color: #ffc107;"></i>
+                <h5 class="mt-3">No Purchases Yet</h5>
+                <p class="text-muted">You haven't made any purchases yet.</p>
                 <a href="{% url 'buy_page' %}" class="btn btn-warning mt-2">Start Shopping</a>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Seller Orders -->
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">Orders Received (As Seller)</h5>
+            </div>
+            <div class="card-body">
+              {% if seller_orders %}
+              <div class="table-responsive">
+                <table class="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>Order #</th>
+                      <th>Buyer</th>
+                      <th>Date</th>
+                      <th>Total</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for order in seller_orders %}
+                    <tr>
+                      <td>#{{ order.id }}</td>
+                      <td>{{ order.full_name }}</td>
+                      <td>{{ order.create_date|date:"M d, Y" }}</td>
+                      <td>₹{{ order.order_total }}</td>
+                      <td>
+                        {% if order.status == 'PENDING' %}
+                        <span class="badge bg-warning">{{ order.get_status_display }}</span>
+                        {% elif order.status == 'ACCEPTED' %}
+                        <span class="badge bg-info">{{ order.get_status_display }}</span>
+                        {% elif order.status == 'COMPLETED' %}
+                        <span class="badge bg-success">{{ order.get_status_display }}</span>
+                        {% elif order.status == 'CANCELLED' %}
+                        <span class="badge bg-danger">{{ order.get_status_display }}</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        <a href="{% url 'order_detail' order.id %}" class="btn btn-sm btn-outline-warning">Manage Order</a>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              {% else %}
+              <div class="text-center py-4">
+                <i class="bi bi-shop" style="font-size: 3rem; color: #ffc107;"></i>
+                <h5 class="mt-3">No Orders Received</h5>
+                <p class="text-muted">You haven't received any orders for your products yet.</p>
               </div>
               {% endif %}
             </div>

@@ -51,8 +51,16 @@ def home(request):
     sale_products = ProductItem.objects.filter(status=True, post_type="FS").order_by('-create_date')[:4]
     buy_products = ProductItem.objects.filter(status=True, post_type="FB").order_by('-create_date')[:4]
     
-    context['sale_products'] = sale_products
-    context['buy_products'] = buy_products
+    # Get total counts for each type
+    sale_count = ProductItem.objects.filter(status=True, post_type="FS").count()
+    buy_count = ProductItem.objects.filter(status=True, post_type="FB").count()
+    
+    context.update({
+        'sale_products': sale_products,
+        'buy_products': buy_products,
+        'sale_count': sale_count,
+        'buy_count': buy_count
+    })
     
     return render(request, 'index.html', context)
 
@@ -163,8 +171,26 @@ def reply(request):
         user = request.user
         product_id = request.POST.get('product_id')
         reply = request.POST.get('reply')
+        
+        if not reply or not reply.strip():
+            messages.error(request, "Please enter a message before sending.")
+            return redirect(request.META['HTTP_REFERER'])
+            
         product = get_object_or_404(ProductItem, pk=product_id)
+        
+        # Create the message
         BeatItem.objects.create(user=user, product=product, reply=reply)
+        
+        # Create notification for the product owner
+        Notification.objects.create(
+            user=product.user,
+            title="New Message Received",
+            message=f"You have received a new message about your product '{product.title}' from {user.get_full_name() or user.username}."
+        )
+        
+        # Add success message with more details
+        messages.success(request, f"✅ Message sent successfully to {product.user.get_full_name() or product.user.username}! They will be notified via email.")
+        
     return redirect(request.META['HTTP_REFERER'])
 
 
@@ -333,11 +359,16 @@ def update_cart(request, cart_id):
 
 @login_required
 def remove_from_cart(request, cart_id):
-    cart_item = get_object_or_404(Cart, id=cart_id, user=request.user)
-    product_title = cart_item.product.title
-    cart_item.delete()
+    try:
+        cart_item = Cart.objects.get(id=cart_id, user=request.user)
+        product_title = cart_item.product.title
+        cart_item.delete()
+        messages.success(request, f"{product_title} removed from your cart!")
+    except Cart.DoesNotExist:
+        messages.error(request, "Cart item not found or doesn't belong to you.")
+    except Exception as e:
+        messages.error(request, f"An error occurred while removing the item from cart: {str(e)}")
     
-    messages.success(request, f"{product_title} removed from your cart!")
     return redirect('view_cart')
 
 
@@ -359,12 +390,8 @@ def checkout(request):
             order.user = request.user
             order.order_total = total
             
-            # Ensure both pincode and zipcode fields are set
-            pincode_value = form.cleaned_data.get('pincode')
-            if pincode_value:
-                order.pincode = pincode_value
-                order.zipcode = pincode_value
-                
+            # Get the seller from the first cart item (assuming all items are from same seller)
+            order.seller = cart_items.first().product.user
             order.save()
             
             # Create order items
@@ -380,44 +407,53 @@ def checkout(request):
             # Clear the cart
             cart_items.delete()
             
-            # Create notification
+            # Create notification for seller
+            Notification.objects.create(
+                user=order.seller,
+                title="New Order Request",
+                message=f"You have a new order request #{order.id} from {order.full_name}. Please review and accept/decline."
+            )
+            
+            # Create notification for buyer
             Notification.objects.create(
                 user=request.user,
                 title="Order Placed Successfully",
-                message=f"Your order #{order.id} has been placed successfully. Please complete the payment."
+                message=f"Your order #{order.id} has been placed successfully. Waiting for seller approval."
             )
             
-            # Send email notification
+            # Send email notification to seller
             try:
-                subject = f"Order Confirmation - Order #{order.id}"
+                subject = f"New Order Request - Order #{order.id}"
                 message = f"""
-                Dear {order.full_name},
+                Dear {order.seller.get_full_name() or order.seller.username},
                 
-                Thank you for your order! Your order #{order.id} has been received and is awaiting payment.
+                You have received a new order request:
                 
-                Order Total: ${order.order_total}
-                Payment Method: {order.get_payment_method_display()}
+                Order #{order.id}
+                Buyer: {order.full_name}
+                Contact: {order.phone}
+                Email: {order.email}
+                Total Amount: ₹{order.order_total}
                 
-                Please complete your payment to process your order.
+                Please log in to your account to review and accept/decline this order.
                 
                 Best regards,
-                The OAMS Team
+                The Agri-Con Team
                 """
                 
                 send_mail(
                     subject,
                     message,
                     settings.DEFAULT_FROM_EMAIL,
-                    [order.email],
+                    [order.seller.email],
                     fail_silently=True,
                 )
             except Exception as e:
                 print(f"Email error: {str(e)}")
             
-            # Redirect to payment page instead of order success
-            return redirect('payment', order_id=order.id)
+            messages.success(request, "Order placed successfully! Waiting for seller approval.")
+            return redirect('order_detail', order_id=order.id)
     else:
-        # Pre-fill form with user information
         initial_data = {}
         if hasattr(request.user, 'email'):
             initial_data['email'] = request.user.email
@@ -450,10 +486,13 @@ def order_success(request, order_id):
 
 @login_required
 def my_orders(request):
-    orders = Order.objects.filter(user=request.user).order_by('-create_date')
+    # Show orders where user is either buyer or seller
+    buyer_orders = Order.objects.filter(user=request.user).order_by('-create_date')
+    seller_orders = Order.objects.filter(seller=request.user).order_by('-create_date')
     
     context = {
-        'orders': orders
+        'buyer_orders': buyer_orders,
+        'seller_orders': seller_orders
     }
     
     return render(request, 'my_orders.html', context)
@@ -461,12 +500,25 @@ def my_orders(request):
 
 @login_required
 def order_detail(request, order_id):
-    order = get_object_or_404(Order, id=order_id, user=request.user)
+    # Allow both buyer and seller to view the order
+    order = get_object_or_404(Order, id=order_id)
+    
+    # Check if the user has permission to view this order
+    if not (order.user == request.user or order.seller == request.user):
+        messages.error(request, "You don't have permission to view this order.")
+        return redirect('my_orders')
+    
+    # Ensure seller exists
+    if not order.seller:
+        messages.error(request, "This order has no assigned seller.")
+        return redirect('my_orders')
+    
     order_items = OrderItem.objects.filter(order=order)
     
     context = {
         'order': order,
-        'order_items': order_items
+        'order_items': order_items,
+        'is_seller': order.seller == request.user
     }
     
     return render(request, 'order_detail.html', context)
@@ -629,55 +681,13 @@ def process_payment(request, order_id):
 @login_required
 def userprofile(request):
     context = {}
-    
-    # Get user's products (for sale items)
-    products = ProductItem.objects.filter(user=request.user, post_type="FS").order_by('-create_date')
+    products = ProductItem.objects.filter(user=request.user).order_by('-id')
+    complains = Complain.objects.filter(user=request.user).order_by('-id')
     context['products'] = products
-    
-    # Get user's orders (purchases) - Show all orders, not just completed ones
-    orders = Order.objects.filter(user=request.user).order_by('-create_date')
-    
-    # Debug: Log the orders found for the current user
-    print(f"Found {orders.count()} orders for user {request.user.id} ({request.user.username})")
-    for order in orders:
-        print(f"Order #{order.id}, Payment Status: {order.payment_status}, Status: {order.status}")
-    
-    context['orders'] = orders
-    
-    # Get product messages
-    beats = BeatItem.objects.filter(product__user=request.user).order_by('-create_date')
-    context['beats'] = beats
-    
-    # Get notifications
-    notifications = Notification.objects.filter(user=request.user).order_by('-create_date')[:10]
-    context['notifications'] = notifications
-    
-    # Calculate dashboard statistics
-    total_products = products.count()
-    # Count products that have sold at least one unit
-    sold_products = sum(1 for product in products if product.sold_quantity > 0)
-    # Count products that are active (have available quantity)
-    active_listings = sum(1 for product in products if product.quantity > product.sold_quantity)
-    
-    context['total_products'] = total_products
-    context['sold_products'] = sold_products
-    context['active_listings'] = active_listings
-    
-    # Get user profile if it exists
-    if hasattr(request.user, 'userprofile'):
-        context['profile'] = request.user.userprofile
-    
-    return render(request, 'account/dashboard.html', context)
+    context['complains'] = complains
+    return render(request, 'userprofile.html', context)
 
 
-def project(request):
-    """
-    Render the project information page
-    """
-    return render(request, 'project.html')
-
-
-# Add quantity to existing product
 @login_required
 def add_quantity(request, product_id):
     product = get_object_or_404(ProductItem, id=product_id, user=request.user)
@@ -768,3 +778,48 @@ def add_review(request, product_id):
     
     # If GET request, redirect to product detail
     return redirect('detail', id=product_id)
+
+
+@login_required
+def update_order_status(request, order_id):
+    order = get_object_or_404(Order, id=order_id, seller=request.user)
+    
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        notes = request.POST.get('notes', '')
+        
+        if new_status not in dict(Order.STATUS_CHOICES):
+            messages.error(request, "Invalid status.")
+            return redirect('order_detail', order_id=order.id)
+        
+        order.status = new_status
+        order.seller_notes = notes
+        
+        if new_status == 'COMPLETED':
+            order.completion_date = timezone.now()
+            
+            # Update product quantities
+            order_items = OrderItem.objects.filter(order=order)
+            for item in order_items:
+                product = item.product
+                product.sold_quantity += item.quantity
+                product.save()
+        
+        order.save()
+        
+        # Create notification for buyer
+        status_messages = {
+            'ACCEPTED': "Your order has been accepted by the seller. They will contact you soon.",
+            'COMPLETED': "Your order has been marked as completed by the seller.",
+            'CANCELLED': "Your order has been cancelled by the seller."
+        }
+        
+        Notification.objects.create(
+            user=order.user,
+            title=f"Order {new_status.title()}",
+            message=status_messages.get(new_status, f"Your order status has been updated to {new_status}")
+        )
+        
+        messages.success(request, f"Order status updated to {new_status}")
+    
+    return redirect('order_detail', order_id=order.id)

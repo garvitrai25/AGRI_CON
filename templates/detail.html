@@ -35,21 +35,12 @@
   
           <div class="row gy-4">
   
-            <div class="col-lg-8">
-              <div class="portfolio-details-slider swiper">
-                <div class="swiper-wrapper align-items-center">
-  
-                  <div class="swiper-slide">
-                    {% if product.image %}
-                    <img src="{{product.image.url}}" alt="">
-                    {% else %}
-                    <img src="{% static 'assets/img/portfolio/portfolio-1.jpg' %}" alt="">
-                    {% endif %}
-                  </div>
-  
-                </div>
-                <div class="swiper-pagination"></div>
-              </div>
+            <div class="col-lg-6">
+              {% if product.image %}
+              <img src="{{ product.image.url }}" class="img-fluid rounded" alt="{{ product.title }}">
+              {% else %}
+              <img src="{% static 'assets/img/no-image.jpg' %}" class="img-fluid rounded" alt="No image available">
+              {% endif %}
             </div>
   
             <div class="col-lg-4">
@@ -61,7 +52,7 @@
                   <li><strong>Saller/Buyer</strong>: {{product.user.get_full_name}}</li>
                   <li><strong>Price:</strong> <span class="text-success">₹{{ product.price }}</span> / {% if product.unit %}{{ product.unit }}{% else %}Item{% endif %}</li>
                   <li><strong>Quantity</strong>: {{product.quantity}} -{% if product.unit %}{{product.unit}} {% else %}Items{% endif %}</li>
-                  <li><strong>Project date</strong>: {{product.create_date}}</li>
+                  <li><strong>Created on</strong>: {{product.create_date}}</li>
                   {% if request.user.is_authenticated %}
                   <li>
                     <a href="{% url 'add_to_cart' product.id %}" class="btn btn-warning w-100">

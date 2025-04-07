@@ -1,0 +1,8 @@
+<!-- Profile Picture -->
+<div class="text-center mb-4">
+  {% if user.user_info.profile_pic %}
+  <img src="{{ user.user_info.profile_pic.url }}" class="rounded-circle img-thumbnail" alt="Profile Picture" style="width: 150px; height: 150px; object-fit: cover;">
+  {% else %}
+  <img src="{% static 'assets/img/default-avatar.jpg' %}" class="rounded-circle img-thumbnail" alt="Default Profile Picture" style="width: 150px; height: 150px; object-fit: cover;">
+  {% endif %}
+</div> 

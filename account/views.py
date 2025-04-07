@@ -13,80 +13,48 @@ from django.urls import reverse_lazy
 from account.models import User_info, create_user_profile
 from agro.models import BeatItem, Notification, Order, ProductItem
 
-from .forms import UserFLEname, UserInfo, UserSignUpForm
+from .forms import CustomUserCreationForm, UserFLEname, UserInfo
 
 
-def user_login(request):
+def login_view(request):
     if not request.user.is_authenticated:
-        if request.method == "POST":
-            username = request.POST['username']
-            password = request.POST['password']
+        if request.method == 'POST':
+            username = request.POST.get('username')
+            password = request.POST.get('password')
             user = authenticate(request, username=username, password=password)
+            
             if user is not None:
                 login(request, user)
-                print('successfully login in')
+                messages.success(request, f"✅ Welcome back, {user.get_full_name() or user.username}!")
                 return redirect('home')
             else:
-                return render(request,'account/login.html')
+                # Check if user exists
+                if User.objects.filter(username=username).exists():
+                    messages.error(request, "❌ Incorrect password. Please try again.")
+                else:
+                    messages.error(request, "❌ User does not exist. Please check your username or sign up.")
+                    
+        return render(request, 'account/login.html')
+    else:
+        return redirect('home')
+
+
+def signup(request):
+    if request.method == 'POST':
+        form = CustomUserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            messages.success(request, "✅ Registration successful! Please login with your credentials.")
+            return redirect('login')
         else:
-            return render(request,'account/login.html')
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"❌ {error}")
     else:
-        return redirect('home')
+        form = CustomUserCreationForm()
+    
+    return render(request, 'registration/signup.html', {'form': form})
 
-
-def signup_view(request):
-    if not request.user.is_authenticated:
-        form = UserSignUpForm()
-        form1 = UserInfo()
-        if request.method == "POST":
-            form = UserSignUpForm(request.POST)
-            form1 = UserInfo(request.POST, request.FILES)  # Make sure to use request.FILES for file uploads      
-
-            if form.is_valid() and form1.is_valid():
-                print(f"Profile pic: {form1.cleaned_data['profile_pic']}")
-                
-                # Temporarily disconnect the post_save signal
-                post_save.disconnect(create_user_profile, sender=User)
-                
-                try:
-                    # Create the user
-                    userform = form.save()
-                    
-                    # Create the User_info record
-                    userinfo = form1.save(commit=False)
-                    userinfo.user = userform
-                    userinfo.save()
-                    
-                    # Send email notification
-                    try:
-                        print("got it", request.META['HTTP_REFERER'])
-                        from_email = settings.DEFAULT_FROM_EMAIL
-                        message = f"Dear {form.cleaned_data['username']}, Thanks for creating an account. Your email address: {form.cleaned_data['email']}"
-                        email = form.cleaned_data['email']
-                        send_mail("Your account has been created!", message, from_email, [
-                                email], fail_silently=False)
-                        messages.success(
-                            request, f"Account successfully created. Please login.")
-                    except BadHeaderError as error:
-                        messages.error(request, f"{error}")
-                    
-                    return redirect('login')
-                finally:
-                    # Reconnect the signal regardless of success or failure
-                    post_save.connect(create_user_profile, sender=User)
-            else:
-                # If forms are not valid, show error messages
-                for field, errors in form.errors.items():
-                    for error in errors:
-                        messages.error(request, f"Error in {field}: {error}")
-                
-                for field, errors in form1.errors.items():
-                    for error in errors:
-                        messages.error(request, f"Error in {field}: {error}")
-
-        return render(request, 'account/signup.html', context={'form': form, 'form1': form1})
-    else:
-        return redirect('home')
 
 @login_required(login_url='/account/login/')
 def user_logout(request):
@@ -120,18 +88,30 @@ def user_profile(request):
         messages.info(request, "We've created a default profile for you. Please update your information.")
     
     products = ProductItem.objects.filter(user=user)
-    beat_item = BeatItem.objects.filter(user=user)
     
-    # Get recent orders
+    # Get messages sent by user
+    sent_messages = BeatItem.objects.filter(user=user)
+    
+    # Get messages received on user's products
+    received_messages = BeatItem.objects.filter(product__user=user)
+    
+    # Get recent orders (as buyer)
     recent_orders = Order.objects.filter(user=user).order_by('-create_date')[:5]
+    
+    # Get orders received as seller
+    seller_orders = Order.objects.filter(seller=user).order_by('-create_date')[:10]
+    
+    # Get unread notifications
     notifications = Notification.objects.filter(user=user, is_read=False).order_by('-create_date')[:10]
     
     context = {
         'user': user,
         'profile': user_profile,
         'products': products,
-        'beat_items': beat_item,
+        'sent_messages': sent_messages,
+        'received_messages': received_messages,
         'recent_orders': recent_orders,
+        'seller_orders': seller_orders,
         'notifications': notifications
     }
     return render(request, 'account/dashboard.html', context)

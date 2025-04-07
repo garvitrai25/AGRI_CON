@@ -12,9 +12,8 @@ POST_TYPE = (
 
 ORDER_STATUS = (
     ("PENDING", "Pending"),
-    ("PROCESSING", "Processing"),
-    ("SHIPPED", "Shipped"),
-    ("DELIVERED", "Delivered"),
+    ("ACCEPTED", "Accepted by Seller"),
+    ("COMPLETED", "Sale Completed"),
     ("CANCELLED", "Cancelled"),
 )
 
@@ -60,7 +59,7 @@ class ProductItem(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     title = models.CharField(max_length=100)
     description = models.TextField()
-    image = models.ImageField(upload_to='products/')
+    image = models.ImageField(upload_to='products/', null=True, blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
     quantity = models.FloatField(validators=[MinValueValidator(0.01)])
     sold_quantity = models.FloatField(default=0)
@@ -161,28 +160,14 @@ class EmailSubscription(models.Model):
 
 class Order(models.Model):
     STATUS_CHOICES = (
-        ('PENDING', 'Pending'),
-        ('PROCESSING', 'Processing'),
-        ('SHIPPED', 'Shipped'),
-        ('DELIVERED', 'Delivered'),
+        ('PENDING', 'Pending Seller Approval'),
+        ('ACCEPTED', 'Accepted by Seller'),
+        ('COMPLETED', 'Sale Completed'),
         ('CANCELLED', 'Cancelled'),
     )
     
-    PAYMENT_STATUS_CHOICES = (
-        ('PENDING', 'Pending'),
-        ('COMPLETED', 'Completed'),
-        ('FAILED', 'Failed'),
-        ('REFUNDED', 'Refunded'),
-    )
-    
-    PAYMENT_METHOD_CHOICES = (
-        ('credit_card', 'Credit Card'),
-        ('debit_card', 'Debit Card'),
-        ('upi', 'UPI'),
-        ('net_banking', 'Net Banking'),
-    )
-    
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='buyer_orders')
+    seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name='seller_orders', null=True, blank=True)
     full_name = models.CharField(max_length=100)
     email = models.EmailField()
     phone = models.CharField(max_length=15)
@@ -190,27 +175,20 @@ class Order(models.Model):
     city = models.CharField(max_length=100)
     state = models.CharField(max_length=100)
     pincode = models.CharField(max_length=10)
-    zipcode = models.CharField(max_length=10)
     order_total = models.DecimalField(max_digits=10, decimal_places=2)
-    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='credit_card')
-    payment_status = models.CharField(max_length=10, choices=PAYMENT_STATUS_CHOICES, default='PENDING')
-    transaction_id = models.CharField(max_length=100, blank=True, null=True)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    seller_notes = models.TextField(blank=True, null=True, help_text="Seller can add notes about the transaction")
+    completion_date = models.DateTimeField(null=True, blank=True)
     create_date = models.DateTimeField(auto_now_add=True)
     update_date = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Order #{self.id} - {self.user.username}"
+        return f"Order #{self.id} by {self.full_name}"
 
     def get_absolute_url(self):
         return reverse('order_detail', args=[str(self.id)])
 
     def save(self, *args, **kwargs):
-        # Ensure pincode and zipcode are synchronized
-        if self.pincode and not self.zipcode:
-            self.zipcode = self.pincode
-        elif self.zipcode and not self.pincode:
-            self.pincode = self.zipcode
         super().save(*args, **kwargs)
 
 

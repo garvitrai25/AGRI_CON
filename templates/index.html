@@ -418,89 +418,111 @@
     <!-- End Contact Section -->
 
     <!-- ======= Featured Products Section ======= -->
-    <section id="featured-products" class="featured-products">
-      <div class="container" data-aos="fade-up">
-
+    <section class="inner-page">
+      <div class="container">
         <div class="section-title">
-          <h2>Featured Products</h2>
-          <p>Check out our latest products</p>
+          <h2>FEATURED PRODUCTS</h2>
+          <p>CHECK OUT OUR LATEST LISTINGS</p>
         </div>
 
-        <div class="row">
-          <div class="col-lg-6">
-            <h3 class="mb-4">Products For Sale</h3>
+        <!-- Products For Sale Section -->
+        <div class="row mb-5">
+          <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <h3>Products For Sale</h3>
+              <a href="{% url 'buy_page' %}" class="btn btn-outline-primary">View All ({{ sale_count }})</a>
+            </div>
+            {% if sale_products %}
             <div class="row">
               {% for product in sale_products %}
-              <div class="col-md-6 mb-4">
+              <div class="col-lg-3 col-md-6 mb-4">
                 <div class="card h-100">
+                  {% if product.image %}
                   <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.title }}" style="height: 200px; object-fit: cover;">
+                  {% else %}
+                  <img src="{% static 'assets/img/no-image.jpg' %}" class="card-img-top" alt="No image available" style="height: 200px; object-fit: cover;">
+                  {% endif %}
                   <div class="card-body">
-                    <h5 class="card-title">{{ product.title|truncatechars:25 }}</h5>
-                    <p class="card-text text-muted">₹{{ product.price }}</p>
-                    <div class="d-flex justify-content-between">
-                      <a href="{% url 'detail' product.id %}" class="btn btn-sm btn-outline-warning">View Details</a>
-                      {% if request.user.is_authenticated %}
-                      <a href="{% url 'add_to_cart' product.id %}" class="btn btn-sm btn-warning">
-                        <i class="bi bi-cart-plus"></i>
-                      </a>
-                      {% endif %}
-                    </div>
+                    <h5 class="card-title">{{ product.title }}</h5>
+                    <p class="card-text">
+                      <strong>Price:</strong> ₹{{ product.price }}<br>
+                      <strong>Quantity:</strong> {{ product.quantity }} {{ product.get_unit_display }}
+                    </p>
+                    <a href="{% url 'detail' product.id %}" class="btn btn-primary">View Details</a>
                   </div>
                 </div>
               </div>
-              {% empty %}
-              <div class="col-12">
-                <div class="alert alert-warning">No products available for sale at the moment.</div>
-              </div>
               {% endfor %}
             </div>
-            <div class="text-center mt-3">
-              <a href="{% url 'sale_page' %}" class="btn btn-warning">View All Sale Products</a>
+            {% else %}
+            <div class="alert alert-info">
+              No products are currently listed for sale. 
+              {% if user.is_authenticated %}
+              <a href="{% url 'add_product' %}" class="alert-link">Be the first to list a product!</a>
+              {% else %}
+              <a href="{% url 'login' %}" class="alert-link">Login to list your products!</a>
+              {% endif %}
             </div>
+            {% endif %}
           </div>
-          
-          <div class="col-lg-6">
-            <h3 class="mb-4">Products For Buy</h3>
+        </div>
+
+        <!-- Products Wanted Section -->
+        <div class="row">
+          <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <h3>Products Wanted</h3>
+              <div>
+                {% if user.is_authenticated %}
+                <a href="{% url 'add_product' %}" class="btn btn-success me-2">Post Your Requirement</a>
+                {% endif %}
+                <a href="{% url 'buy_page' %}" class="btn btn-outline-primary">View All ({{ buy_count }})</a>
+              </div>
+            </div>
+            {% if buy_products %}
             <div class="row">
               {% for product in buy_products %}
-              <div class="col-md-6 mb-4">
+              <div class="col-lg-3 col-md-6 mb-4">
                 <div class="card h-100">
+                  {% if product.image %}
                   <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.title }}" style="height: 200px; object-fit: cover;">
+                  {% else %}
+                  <img src="{% static 'assets/img/no-image.jpg' %}" class="card-img-top" alt="No image available" style="height: 200px; object-fit: cover;">
+                  {% endif %}
                   <div class="card-body">
-                    <h5 class="card-title">{{ product.title|truncatechars:25 }}</h5>
-                    <p class="card-text text-muted">₹{{ product.price }}</p>
-                    <div class="d-flex justify-content-between">
-                      <a href="{% url 'detail' product.id %}" class="btn btn-sm btn-outline-warning">View Details</a>
-                      {% if request.user.is_authenticated %}
-                      <a href="{% url 'add_to_cart' product.id %}" class="btn btn-sm btn-warning">
-                        <i class="bi bi-cart-plus"></i>
-                      </a>
-                      {% endif %}
-                    </div>
+                    <h5 class="card-title">{{ product.title }}</h5>
+                    <p class="card-text">
+                      <strong>Required:</strong> {{ product.quantity }} {{ product.get_unit_display }}<br>
+                      <strong>Budget:</strong> ₹{{ product.price }}
+                    </p>
+                    <a href="{% url 'detail' product.id %}" class="btn btn-primary">View Details</a>
                   </div>
                 </div>
               </div>
-              {% empty %}
-              <div class="col-12">
-                <div class="alert alert-warning">No products available for buy at the moment.</div>
-              </div>
               {% endfor %}
             </div>
-            <div class="text-center mt-3">
-              <a href="{% url 'buy_page' %}" class="btn btn-warning">View All Buy Products</a>
+            {% else %}
+            <div class="alert alert-info">
+              No buying requirements posted yet.
+              {% if user.is_authenticated %}
+              <a href="{% url 'add_product' %}" class="alert-link">Post your requirement now!</a>
+              {% else %}
+              <a href="{% url 'login' %}" class="alert-link">Login to post your requirements!</a>
+              {% endif %}
             </div>
+            {% endif %}
           </div>
         </div>
 
       </div>
-    </section><!-- End Featured Products Section -->
+    </section>
 
   </main>
   <!-- End #main -->
-  {% endblock %}
+{% endblock %}
 
-  <!-- ======= Footer ======= -->
-  {% block footer %}
-    {% include 'common/footer.html' %}
-  {% endblock %}
-  <!-- End Footer -->
+<!-- ======= Footer ======= -->
+{% block footer %}
+  {% include 'common/footer.html' %}
+{% endblock %}
+<!-- End Footer -->

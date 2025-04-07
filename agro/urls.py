@@ -4,8 +4,9 @@ from .views import (add_complain, add_product, add_quantity, add_review,
                     add_to_cart, buy_page, checkout, contact, delete_product,
                     detail, edit_product, email_subscribe, home,
                     mark_notification_as_read, my_orders, order_detail,
-                    order_success, payment, process_payment, project,
-                    remove_from_cart, reply, sale_page, update_cart, view_cart)
+                    order_success, payment, process_payment, remove_from_cart,
+                    reply, sale_page, update_cart, update_order_status,
+                    view_cart)
 
 urlpatterns = [
     path('', home, name='home'),
@@ -20,7 +21,6 @@ urlpatterns = [
     path('contact/', contact, name='contact'),
     path('email-subscribe/', email_subscribe, name='email_subscribe'),
     path('add-complain/', add_complain, name='add_complain'),
-    path('project/', project, name='project'),
     
     # Cart URLs
     path('add-to-cart/<int:product_id>/', add_to_cart, name='add_to_cart'),
@@ -35,6 +35,7 @@ urlpatterns = [
     path('order-success/<int:order_id>/', order_success, name='order_success'),
     path('my-orders/', my_orders, name='my_orders'),
     path('order-detail/<int:order_id>/', order_detail, name='order_detail'),
+    path('update-order-status/<int:order_id>/', update_order_status, name='update_order_status'),
     
     # Review URL
     path('add-review/<int:product_id>/', add_review, name='add_review'),

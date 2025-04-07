@@ -19,7 +19,7 @@
         <h2>Order Details</h2>
         <ol>
           <li><a href="{% url 'home' %}">Home</a></li>
-          <li><a href="{% url 'my_orders' %}">My Orders</a></li>
+          <li><a href="{% url 'my_orders' %}">Orders</a></li>
           <li>Order #{{ order.id }}</li>
         </ol>
       </div>
@@ -31,7 +31,7 @@
     <div class="container">
       
       {% if messages %}
-      <div class="row">
+      <div class="row mb-4">
         <div class="col-12">
           {% for message in messages %}
           <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -43,107 +43,75 @@
       </div>
       {% endif %}
       
+      <!-- Debug Information -->
+      {% if user.is_authenticated %}
+      <div class="alert alert-info">
+        <p><strong>Debug Info:</strong></p>
+        <p>Logged in user: {{ user.username }}</p>
+        <p>Order seller: {{ order.seller.username }}</p>
+        <p>Order buyer: {{ order.user.username }}</p>
+        <p>Is seller view: {{ is_seller }}</p>
+      </div>
+      {% endif %}
+      
       <div class="row">
-        <div class="col-lg-3">
+        <div class="col-lg-8">
+          <!-- Order Status Card -->
           <div class="card mb-4">
-            <div class="card-header">
-              <h5 class="mb-0">My Account</h5>
-            </div>
-            <div class="list-group list-group-flush">
-              <a href="{% url 'userprofile' %}" class="list-group-item list-group-item-action">Dashboard</a>
-              <a href="{% url 'my_orders' %}" class="list-group-item list-group-item-action active">My Orders</a>
-              <a href="{% url 'editUserInfo' %}" class="list-group-item list-group-item-action">Edit Profile</a>
-              <a href="{% url 'add_complain' %}" class="list-group-item list-group-item-action">Submit Complaint</a>
-              <a href="{% url 'logout' %}" class="list-group-item list-group-item-action text-danger">Logout</a>
-            </div>
-          </div>
-        </div>
-        <div class="col-lg-9">
-          <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <h5 class="mb-0">Order #{{ order.id }}</h5>
-              <div>
-                {% if order.status == 'PENDING' %}
-                <span class="badge bg-warning">{{ order.get_status_display }}</span>
-                {% elif order.status == 'PROCESSING' %}
-                <span class="badge bg-info">{{ order.get_status_display }}</span>
-                {% elif order.status == 'SHIPPED' %}
-                <span class="badge bg-primary">{{ order.get_status_display }}</span>
-                {% elif order.status == 'DELIVERED' %}
-                <span class="badge bg-success">{{ order.get_status_display }}</span>
-                {% elif order.status == 'CANCELLED' %}
-                <span class="badge bg-danger">{{ order.get_status_display }}</span>
-                {% endif %}
-              </div>
-            </div>
             <div class="card-body">
-              <div class="row">
-                <div class="col-md-6">
-                  <h6>Order Information</h6>
-                  <p><strong>Order Date:</strong> {{ order.create_date|date:"F j, Y" }}</p>
-                  <p><strong>Payment Method:</strong> {{ order.get_payment_method_display }}</p>
-                  <p>
-                    <strong>Payment Status:</strong> 
-                    {% if order.payment_status == 'PENDING' %}
-                    <span class="badge bg-warning">{{ order.get_payment_status_display }}</span>
-                    {% elif order.payment_status == 'COMPLETED' %}
-                    <span class="badge bg-success">{{ order.get_payment_status_display }}</span>
-                    {% elif order.payment_status == 'FAILED' %}
-                    <span class="badge bg-danger">{{ order.get_payment_status_display }}</span>
-                    {% elif order.payment_status == 'REFUNDED' %}
-                    <span class="badge bg-info">{{ order.get_payment_status_display }}</span>
-                    {% endif %}
-                  </p>
-                  {% if order.transaction_id %}
-                  <p><strong>Transaction ID:</strong> {{ order.transaction_id }}</p>
-                  {% endif %}
-                </div>
-                <div class="col-md-6">
-                  <h6>Shipping Information</h6>
-                  <p><strong>Name:</strong> {{ order.full_name }}</p>
-                  <p><strong>Email:</strong> {{ order.email }}</p>
-                  <p><strong>Phone:</strong> {{ order.phone }}</p>
-                  <p><strong>Address:</strong> {{ order.address }}, {{ order.city }}, {{ order.state }}, {{ order.zipcode }}</p>
-                </div>
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="card-title mb-0">Order Status</h5>
+                <span class="badge bg-{% if order.status == 'COMPLETED' %}success{% elif order.status == 'CANCELLED' %}danger{% elif order.status == 'ACCEPTED' %}info{% else %}warning{% endif %}">
+                  {{ order.get_status_display }}
+                </span>
               </div>
+              {% if order.seller_notes %}
+              <div class="alert alert-info">
+                <strong>Seller Notes:</strong><br>
+                {{ order.seller_notes }}
+              </div>
+              {% endif %}
               
-              {% if order.order_notes %}
-              <div class="alert alert-light mt-3">
-                <h6>Order Notes:</h6>
-                <p class="mb-0">{{ order.order_notes }}</p>
-              </div>
-              {% endif %}
-
-              <!-- Add a "Pay Now" button for pending payments -->
-              {% if order.payment_status == 'PENDING' %}
-              <div class="alert alert-warning mt-3">
-                <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <strong>Payment Required</strong>
-                    <p class="mb-0">Please complete the payment to process your order.</p>
-                  </div>
-                  <a href="{% url 'payment' order.id %}" class="btn btn-warning">Pay Now</a>
+              {% if is_seller and order.status == 'PENDING' %}
+              <form action="{% url 'update_order_status' order.id %}" method="post" class="mt-3">
+                {% csrf_token %}
+                <div class="mb-3">
+                  <label class="form-label">Update Order Status</label>
+                  <select name="status" class="form-select">
+                    <option value="ACCEPTED">Accept Order</option>
+                    <option value="CANCELLED">Cancel Order</option>
+                  </select>
                 </div>
-              </div>
-              {% elif order.payment_status == 'FAILED' %}
-              <div class="alert alert-danger mt-3">
-                <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <strong>Payment Failed</strong>
-                    <p class="mb-0">Your payment was unsuccessful. Please try again.</p>
-                  </div>
-                  <a href="{% url 'payment' order.id %}" class="btn btn-warning">Try Again</a>
+                <div class="mb-3">
+                  <label class="form-label">Notes for Buyer (optional)</label>
+                  <textarea name="notes" class="form-control" rows="3" placeholder="Add any notes or instructions for the buyer"></textarea>
                 </div>
-              </div>
+                <button type="submit" class="btn btn-primary">Update Status</button>
+              </form>
+              {% elif is_seller and order.status == 'ACCEPTED' %}
+              <form action="{% url 'update_order_status' order.id %}" method="post" class="mt-3">
+                {% csrf_token %}
+                <div class="mb-3">
+                  <label class="form-label">Complete or Cancel Order</label>
+                  <select name="status" class="form-select">
+                    <option value="COMPLETED">Mark as Completed</option>
+                    <option value="CANCELLED">Cancel Order</option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Notes (optional)</label>
+                  <textarea name="notes" class="form-control" rows="3" placeholder="Add any notes about the transaction"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Status</button>
+              </form>
               {% endif %}
             </div>
           </div>
-          
-          <div class="card">
-            <div class="card-header">
-              <h5 class="mb-0">Order Items</h5>
-            </div>
+
+          <!-- Order Items Card -->
+          <div class="card mb-4">
             <div class="card-body">
+              <h5 class="card-title">Order Items</h5>
               <div class="table-responsive">
                 <table class="table">
                   <thead>
@@ -159,31 +127,88 @@
                     <tr>
                       <td>
                         <div class="d-flex align-items-center">
-                          <img src="{{ item.product.image.url }}" alt="{{ item.product.title }}" class="img-fluid rounded" style="max-width: 50px; margin-right: 10px;">
+                          <img src="{{ item.product.image.url }}" alt="{{ item.product.title }}" class="img-fluid rounded" style="max-width: 60px; margin-right: 10px;">
                           <a href="{% url 'detail' item.product.id %}">{{ item.product.title }}</a>
                         </div>
                       </td>
-                      <td>${{ item.price }}</td>
+                      <td>₹{{ item.price }}</td>
                       <td>{{ item.quantity }}</td>
-                      <td>${{ item.total }}</td>
+                      <td>₹{{ item.total }}</td>
                     </tr>
                     {% endfor %}
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colspan="3" class="text-end"><strong>Order Total:</strong></td>
-                      <td><strong>${{ order.order_total }}</strong></td>
+                      <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                      <td><strong>₹{{ order.order_total }}</strong></td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <!-- Contact Information Card -->
+          <div class="card mb-4">
+            <div class="card-body">
+              <h5 class="card-title">Contact Information</h5>
+              {% if is_seller %}
+              <h6 class="card-subtitle mb-2 text-muted">Buyer Details</h6>
+              {% else %}
+              <h6 class="card-subtitle mb-2 text-muted">Your Details</h6>
+              {% endif %}
+              <ul class="list-unstyled">
+                <li><strong>Name:</strong> {{ order.full_name }}</li>
+                <li><strong>Email:</strong> {{ order.email }}</li>
+                <li><strong>Phone:</strong> {{ order.phone }}</li>
+                <li><strong>Address:</strong> {{ order.address }}</li>
+                <li><strong>City:</strong> {{ order.city }}</li>
+                <li><strong>State:</strong> {{ order.state }}</li>
+                <li><strong>Pincode:</strong> {{ order.pincode }}</li>
+              </ul>
               
-              <div class="mt-4 text-end">
-                <a href="{% url 'my_orders' %}" class="btn btn-outline-secondary">Back to Orders</a>
-                {% if order.status == 'PENDING' or order.status == 'PROCESSING' %}
-                <a href="#" class="btn btn-danger ms-2">Cancel Order</a>
-                {% endif %}
+              {% if not is_seller and order.seller %}
+              <div class="mt-4">
+                <h6 class="card-subtitle mb-2 text-muted">Seller Details</h6>
+                <ul class="list-unstyled">
+                  <li><strong>Name:</strong> {{ order.seller.get_full_name|default:order.seller.username }}</li>
+                  <li><strong>Email:</strong> {{ order.seller.email }}</li>
+                </ul>
               </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Order Timeline Card -->
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">Order Timeline</h5>
+              <ul class="list-unstyled">
+                <li class="mb-2">
+                  <i class="bi bi-circle-fill text-success"></i>
+                  Order Placed
+                  <br>
+                  <small class="text-muted">{{ order.create_date|date:"M d, Y H:i" }}</small>
+                </li>
+                {% if order.status != 'PENDING' %}
+                <li class="mb-2">
+                  <i class="bi bi-circle-fill {% if order.status == 'CANCELLED' %}text-danger{% else %}text-info{% endif %}"></i>
+                  {{ order.get_status_display }}
+                  <br>
+                  <small class="text-muted">{{ order.update_date|date:"M d, Y H:i" }}</small>
+                </li>
+                {% endif %}
+                {% if order.completion_date %}
+                <li>
+                  <i class="bi bi-circle-fill text-success"></i>
+                  Sale Completed
+                  <br>
+                  <small class="text-muted">{{ order.completion_date|date:"M d, Y H:i" }}</small>
+                </li>
+                {% endif %}
+              </ul>
             </div>
           </div>
         </div>

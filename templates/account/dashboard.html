@@ -129,10 +129,9 @@
                       </tbody>
                     </table>
                     {% else %}
-                    <div class="text-center py-5">
-                      <i class="bi bi-shop" style="font-size: 4rem; color: #ffc107;"></i>
-                      <h3 class="mt-3">No Products Listed</h3>
-                      <p class="text-muted">Start selling your agricultural equipment today!</p>
+                    <div class="text-center py-4">
+                      <p>No products listed for sale yet.</p>
+                      <a href="{% url 'add_product' %}" class="btn btn-warning">Add Product</a>
                     </div>
                     {% endif %}
                   </div>
@@ -140,31 +139,110 @@
                   <!-- messages section -->
                   <div id="beat" class="container tab-pane fade">
                     <br>
-                    <h4>Product Messages</h4>
-                    {% if beats %}
-                    <div class="list-group">
-                      {% for beat in beats %}
-                      <div class="list-group-item">
-                        <div class="d-flex w-100 justify-content-between">
-                          <h5 class="mb-1">Re: {{ beat.product.title }}</h5>
-                          <small class="text-muted">{{ beat.create_date|timesince }} ago</small>
+                    <!-- Received Messages -->
+                    <div class="mb-4">
+                      <h4>Messages Received</h4>
+                      {% if received_messages %}
+                      <div class="list-group">
+                        {% for message in received_messages %}
+                        <div class="list-group-item">
+                          <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">Re: {{ message.product.title }}</h5>
+                            <small class="text-muted">{{ message.create_date|timesince }} ago</small>
+                          </div>
+                          <p class="mb-1">{{ message.reply }}</p>
+                          <small class="text-muted">From: {{ message.user.get_full_name }}</small>
+                          <br>
+                          <small class="text-muted">Contact: {{ message.user.email }}</small>
                         </div>
-                        <p class="mb-1">{{ beat.reply }}</p>
-                        <small class="text-muted">From: {{ beat.user.get_full_name }}</small>
-                        <br>
-                        <small class="text-muted">Contact: {{ beat.user.email }}</small>
+                        {% endfor %}
                       </div>
-                      {% endfor %}
+                      {% else %}
+                      <div class="alert alert-info">
+                        <i class="bi bi-inbox"></i> No messages received yet.
+                      </div>
+                      {% endif %}
                     </div>
-                    {% else %}
-                    <div class="text-center py-5">
-                      <i class="bi bi-chat-dots" style="font-size: 4rem; color: #ffc107;"></i>
-                      <h4 class="mt-3">No Messages</h4>
-                      <p class="text-muted">You don't have any messages yet.</p>
+
+                    <!-- Sent Messages -->
+                    <div>
+                      <h4>Messages Sent</h4>
+                      {% if sent_messages %}
+                      <div class="list-group">
+                        {% for message in sent_messages %}
+                        <div class="list-group-item">
+                          <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">Re: {{ message.product.title }}</h5>
+                            <small class="text-muted">{{ message.create_date|timesince }} ago</small>
+                          </div>
+                          <p class="mb-1">{{ message.reply }}</p>
+                          <small class="text-muted">To: {{ message.product.user.get_full_name }}</small>
+                          <br>
+                          <small class="text-muted">Product Owner: {{ message.product.user.email }}</small>
+                        </div>
+                        {% endfor %}
+                      </div>
+                      {% else %}
+                      <div class="alert alert-info">
+                        <i class="bi bi-cursor"></i> You haven't sent any messages yet.
+                      </div>
+                      {% endif %}
                     </div>
-                    {% endif %}
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <!-- Received Orders Section -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <h5 class="mb-0">Received Orders</h5>
+              </div>
+              <div class="card-body">
+                {% if seller_orders %}
+                <div class="table-responsive">
+                  <table class="table table-hover">
+                    <thead class="table-dark">
+                      <tr>
+                        <th>Order #</th>
+                        <th>Buyer</th>
+                        <th>Date</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for order in seller_orders %}
+                      <tr>
+                        <td>#{{ order.id }}</td>
+                        <td>{{ order.full_name }}</td>
+                        <td>{{ order.create_date|date:"M d, Y" }}</td>
+                        <td>₹{{ order.order_total }}</td>
+                        <td>
+                          {% if order.status == 'PENDING' %}
+                          <span class="badge bg-warning">{{ order.get_status_display }}</span>
+                          {% elif order.status == 'ACCEPTED' %}
+                          <span class="badge bg-info">{{ order.get_status_display }}</span>
+                          {% elif order.status == 'COMPLETED' %}
+                          <span class="badge bg-success">{{ order.get_status_display }}</span>
+                          {% elif order.status == 'CANCELLED' %}
+                          <span class="badge bg-danger">{{ order.get_status_display }}</span>
+                          {% endif %}
+                        </td>
+                        <td>
+                          <a href="{% url 'order_detail' order.id %}" class="btn btn-sm btn-outline-warning">Manage Order</a>
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                  <p>No orders received yet.</p>
+                </div>
+                {% endif %}
               </div>
             </div>
           </div>

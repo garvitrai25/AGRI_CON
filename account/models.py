@@ -5,9 +5,9 @@ from django.dispatch import receiver
 
 
 class User_info(models.Model):
-    user = models.OneToOneField(User,on_delete=models.CASCADE,blank=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
     GENDER_CHOICE= (('M','Male'),('F','Female'),('OG','Other'))
-    profile_pic = models.ImageField(upload_to='profilepic',blank=False)
+    profile_pic = models.ImageField(upload_to='profilepic', null=True, blank=True)
     gender = models.CharField(max_length=10,choices=GENDER_CHOICE,blank=True)
     address = models.CharField(max_length=100,blank=True)
     phone = models.CharField(max_length=15,blank=True)
@@ -15,7 +15,7 @@ class User_info(models.Model):
     user_type = models.CharField(max_length=10,choices=USER_TYPE,blank=False)
 
     def __str__(self):
-        return "User: {},Genger: {}".format(self.user.first_name, self.gender)
+        return self.user.username
 
 # Signal to create User_info when a new User is created
 @receiver(post_save, sender=User)

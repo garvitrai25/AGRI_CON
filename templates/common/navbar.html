@@ -13,7 +13,6 @@
           <li><a class="nav-link scrollto" href="{% url 'buy_page' %}">Buy</a></li>
           <li><a class="nav-link scrollto" href="{% url 'home' %}#about">About</a></li>
           <li><a class="nav-link scrollto" href="{% url 'home' %}#services">Services</a></li>
-          <li><a class="nav-link scrollto" href="{% url 'project' %}">Project</a></li>
           <li><a class="nav-link scrollto" href="{% url 'home' %}#contact">Contact</a></li>
         </ul>
         <i class="bi bi-list mobile-nav-toggle"></i>
@@ -30,7 +29,21 @@
             {% endif %}
           </button>
           <ul class="dropdown-menu" aria-labelledby="userAccountDropdown">
-            <li><a class="dropdown-item" href="{% url 'userprofile' %}">Dashboard</a></li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'userprofile' %}">
+                Dashboard
+                {% if request.user.notification_set.filter.exists %}
+                <span class="badge rounded-pill bg-danger">
+                  {{ request.user.notification_set.filter.count }}
+                </span>
+                {% endif %}
+                {% if request.user.seller_orders.filter.exists %}
+                <span class="badge rounded-pill bg-warning ms-1" title="New Orders">
+                  {{ request.user.seller_orders.filter.count }}
+                </span>
+                {% endif %}
+              </a>
+            </li>
             <li><a class="dropdown-item" href="{% url 'my_orders' %}">My Orders</a></li>
             <li><a class="dropdown-item" href="{% url 'editUserInfo' %}">Edit Profile</a></li>
             <li><a class="dropdown-item" href="{% url 'add_complain' %}">Submit Complaint</a></li>

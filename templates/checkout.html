@@ -32,7 +32,7 @@
     <div class="container">
       
       {% if messages %}
-      <div class="row">
+      <div class="row mb-4">
         <div class="col-12">
           {% for message in messages %}
           <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -46,9 +46,9 @@
       
       <div class="row">
         <div class="col-lg-8">
-          <div class="card mb-4">
+          <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Shipping Information</h5>
+              <h5 class="card-title">Contact Information</h5>
               <form method="post" id="checkout-form">
                 {% csrf_token %}
                 <div class="row">
@@ -59,13 +59,13 @@
                     {{ form.email|as_crispy_field }}
                   </div>
                 </div>
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    {{ form.phone|as_crispy_field }}
-                  </div>
-                  <div class="col-md-6 mb-3">
-                    {{ form.pincode|as_crispy_field }}
-                  </div>
+                <div class="mb-3">
+                  {{ form.phone|as_crispy_field }}
+                </div>
+
+                <h5 class="card-title mt-4">Shipping Address</h5>
+                <div class="mb-3">
+                  {{ form.address|as_crispy_field }}
                 </div>
                 <div class="row">
                   <div class="col-md-6 mb-3">
@@ -76,14 +76,14 @@
                   </div>
                 </div>
                 <div class="mb-3">
-                  {{ form.address|as_crispy_field }}
+                  {{ form.pincode|as_crispy_field }}
                 </div>
                 
-                <h5 class="card-title mt-4">Payment Method</h5>
-                <div class="mb-3">
-                  {{ form.payment_method|as_crispy_field }}
+                <div class="alert alert-info">
+                  <h6 class="alert-heading">Note:</h6>
+                  <p class="mb-0">This is an offline transaction. After placing the order, you will need to coordinate with the seller for payment and delivery arrangements.</p>
                 </div>
-                
+
                 <div class="d-grid gap-2 mt-4">
                   <button type="submit" class="btn btn-warning" id="place-order-btn">
                     <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="order-spinner"></span>
@@ -95,53 +95,34 @@
           </div>
         </div>
         <div class="col-lg-4">
-          <div class="card mb-4">
+          <div class="card">
             <div class="card-body">
               <h5 class="card-title">Order Summary</h5>
               <div class="table-responsive">
                 <table class="table">
-                  <thead>
-                    <tr>
-                      <th>Product</th>
-                      <th>Qty</th>
-                      <th>Price</th>
-                    </tr>
-                  </thead>
                   <tbody>
                     {% for item in cart_items %}
                     <tr>
-                      <td>{{ item.product.title|truncatechars:20 }}</td>
-                      <td>{{ item.quantity }}</td>
-                      <td>${{ item.total }}</td>
+                      <td>
+                        <div class="d-flex align-items-center">
+                          <img src="{{ item.product.image.url }}" alt="{{ item.product.title }}" class="img-fluid rounded" style="max-width: 50px; margin-right: 10px;">
+                          <div>
+                            <small class="d-block">{{ item.product.title }}</small>
+                            <small class="text-muted">Qty: {{ item.quantity }}</small>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="text-end">₹{{ item.total }}</td>
                     </tr>
                     {% endfor %}
                   </tbody>
+                  <tfoot>
+                    <tr>
+                      <td><strong>Total</strong></td>
+                      <td class="text-end"><strong>₹{{ cart_total }}</strong></td>
+                    </tr>
+                  </tfoot>
                 </table>
-              </div>
-              <hr>
-              <div class="d-flex justify-content-between mb-2">
-                <span>Subtotal:</span>
-                <span>${{ total }}</span>
-              </div>
-              <div class="d-flex justify-content-between mb-2">
-                <span>Shipping:</span>
-                <span>Free</span>
-              </div>
-              <hr>
-              <div class="d-flex justify-content-between mb-2">
-                <strong>Total:</strong>
-                <strong>${{ total }}</strong>
-              </div>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-body">
-              <h5 class="card-title">Secure Checkout</h5>
-              <p class="text-muted small">
-                <i class="bi bi-shield-lock"></i> Your payment information is processed securely. We do not store credit card details.
-              </p>
-              <div class="text-center mt-3">
-                <img src="{% static 'assets/img/payment-methods.png' %}" alt="Payment Methods" class="img-fluid" style="max-width: 250px;">
               </div>
             </div>
           </div>
