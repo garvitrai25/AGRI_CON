@@ -3,5 +3,7 @@ whitenoise==6.0.0
 pillow==9.0.0
 django-allauth==0.50.0
 django-crispy-forms==1.14.0
+crispy-bootstrap5==0.6
 django-environ==0.8.1
 requests==2.27.1
+django-jazzmin==2.6.0

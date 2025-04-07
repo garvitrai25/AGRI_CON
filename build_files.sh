@@ -12,7 +12,7 @@ echo "Created directory structure file"
 
 # Install dependencies
 echo "Installing dependencies..."
-python3 -m pip install -r requirements-minimal.txt
+python3 -m pip install -r requirements.txt
 
 # Create necessary directories
 mkdir -p staticfiles
@@ -27,9 +27,9 @@ touch agro/__init__.py
 touch account/__init__.py
 echo "Created __init__.py files for packages"
 
-# Ensure the vercel_app.py has execution permissions
-chmod +x vercel_app.py
-echo "Set execution permissions for vercel_app.py"
+# Ensure proper permissions
+chmod +x build_files.sh
+echo "Set execution permissions for build script"
 
 # Run migrations and collect static files
 echo "Collecting static files..."
