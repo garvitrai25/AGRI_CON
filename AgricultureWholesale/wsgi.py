@@ -31,13 +31,51 @@ for init_path in init_paths:
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'AgricultureWholesale.settings')
 logging.info("Using standard settings")
 
+# Patch for missing distutils in Vercel environment
+# This needs to be done before importing Django
+import importlib.util
+
+if importlib.util.find_spec("distutils") is None:
+    logging.info("Patching for missing distutils...")
+    import builtins
+    class LooseVersion:
+        def __init__(self, version_string):
+            self.version_string = version_string
+        def __str__(self):
+            return self.version_string
+        def __repr__(self):
+            return self.version_string
+        def __eq__(self, other):
+            return str(self) == str(other)
+        def __lt__(self, other):
+            return str(self) < str(other)
+        def __gt__(self, other):
+            return str(self) > str(other)
+    
+    # Create a fake distutils.version module
+    class FakeDistutilsVersion:
+        LooseVersion = LooseVersion
+    
+    # Create a fake distutils module
+    class FakeDistutils:
+        version = FakeDistutilsVersion
+    
+    # Add it to sys.modules
+    sys.modules['distutils'] = FakeDistutils
+    sys.modules['distutils.version'] = FakeDistutilsVersion
+    logging.info("Successfully patched distutils.version.LooseVersion")
+
 try:
     # Initialize WSGI application
     from django.core.wsgi import get_wsgi_application
     logging.info("Starting WSGI application...")
     logging.info(f"sys.path: {sys.path}")
     logging.info(f"Current directory: {os.getcwd()}")
-    logging.info(f"Files in current directory: {os.listdir('.')}")
+    
+    try:
+        logging.info(f"Files in current directory: {os.listdir('.')}")
+    except Exception as e:
+        logging.error(f"Could not list files in current directory: {e}")
     
     try:
         logging.info(f"Files in AgricultureWholesale: {os.listdir('AgricultureWholesale')}")
