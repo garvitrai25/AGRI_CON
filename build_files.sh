@@ -12,7 +12,8 @@ python3 -m pip install setuptools==57.0.0
 
 # Install dependencies
 echo "Installing dependencies..."
-python3 -m pip install -r requirements.txt
+python3 -m pip install --upgrade pip
+python3 -m pip install --no-cache-dir -r requirements.txt
 
 # Create necessary directories
 mkdir -p staticfiles
